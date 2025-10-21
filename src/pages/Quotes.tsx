@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { QuoteForm } from "@/components/quotes/QuoteForm";
+import { QuoteViewer } from "@/components/quotes/QuoteViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Quotes = () => {
   const [quotes, setQuotes] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
 
   useEffect(() => {
     loadQuotes();
@@ -183,6 +186,16 @@ const Quotes = () => {
                     <TableCell>R$ {Number(quote.total_amount).toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(quote.status)}</TableCell>
                     <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedQuoteId(quote.id);
+                          setViewDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       {quote.status === "pending" && (
                         <Button
                           variant="outline"
@@ -207,6 +220,15 @@ const Quotes = () => {
             </TableBody>
           </Table>
         </div>
+
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Visualizar Orçamento</DialogTitle>
+            </DialogHeader>
+            {selectedQuoteId && <QuoteViewer quoteId={selectedQuoteId} />}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

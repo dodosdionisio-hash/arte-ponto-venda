@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { SaleForm } from "@/components/sales/SaleForm";
+import { SaleViewer } from "@/components/sales/SaleViewer";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Sales = () => {
   const [sales, setSales] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSales();
@@ -132,7 +135,17 @@ const Sales = () => {
                     <TableCell>R$ {Number(sale.total_amount).toFixed(2)}</TableCell>
                     <TableCell>{sale.payment_method || "-"}</TableCell>
                     <TableCell>{getStatusBadge(sale.payment_status)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedSaleId(sale.id);
+                          setViewDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -147,6 +160,15 @@ const Sales = () => {
             </TableBody>
           </Table>
         </div>
+
+        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Visualizar Venda</DialogTitle>
+            </DialogHeader>
+            {selectedSaleId && <SaleViewer saleId={selectedSaleId} />}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

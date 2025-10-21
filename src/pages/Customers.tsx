@@ -76,14 +76,15 @@ const Customers = () => {
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Cadastrar Cliente</DialogTitle>
+                <DialogTitle>{editingCustomer ? "Editar Cliente" : "Cadastrar Cliente"}</DialogTitle>
               </DialogHeader>
               <CustomerForm
+                customer={editingCustomer}
                 onSuccess={() => {
-                  setDialogOpen(false);
+                  handleCloseDialog();
                   loadCustomers();
                 }}
-                onCancel={() => setDialogOpen(false)}
+                onCancel={handleCloseDialog}
               />
             </DialogContent>
           </Dialog>

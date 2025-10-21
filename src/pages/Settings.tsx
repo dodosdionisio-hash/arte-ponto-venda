@@ -16,6 +16,7 @@ const settingsSchema = z.object({
   address: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
+  logo_url: z.string().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -23,6 +24,7 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -32,6 +34,7 @@ const Settings = () => {
       address: "",
       phone: "",
       email: "",
+      logo_url: "",
     },
   });
 
@@ -62,7 +65,41 @@ const Settings = () => {
         address: data.address || "",
         phone: data.phone || "",
         email: data.email || "",
+        logo_url: data.logo_url || "",
       });
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('store-assets')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('store-assets')
+        .getPublicUrl(filePath);
+
+      form.setValue('logo_url', publicUrl);
+      toast.success("Logo enviada com sucesso!");
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao enviar logo");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -195,6 +232,28 @@ const Settings = () => {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="logo_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logo da Loja</FormLabel>
+                      <div className="space-y-2">
+                        {field.value && (
+                          <img src={field.value} alt="Logo" className="h-20 object-contain" />
+                        )}
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          disabled={uploading}
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <Button type="submit" disabled={loading} className="w-full md:w-auto">
                   {loading ? "Salvando..." : "Salvar Configurações"}

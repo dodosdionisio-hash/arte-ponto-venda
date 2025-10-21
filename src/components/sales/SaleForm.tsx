@@ -16,6 +16,8 @@ const saleSchema = z.object({
   sale_number: z.string().min(1, "Número da venda é obrigatório"),
   payment_method: z.string().optional(),
   payment_status: z.string().default("pending"),
+  payment_type: z.enum(["total", "partial"]).default("total"),
+  paid_amount: z.number().optional(),
   notes: z.string().optional(),
 });
 
@@ -37,7 +39,11 @@ interface SaleFormProps {
 
 export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
   const [customers, setCustomers] = useState<any[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
   const [products, setProducts] = useState<any[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [productSearch, setProductSearch] = useState("");
   const [items, setItems] = useState<SaleItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState("");
   const [selectedVariant, setSelectedVariant] = useState("");
@@ -51,9 +57,23 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
       sale_number: `VND-${Date.now()}`,
       payment_method: undefined,
       payment_status: "pending",
+      payment_type: "total",
+      paid_amount: undefined,
       notes: undefined,
     },
   });
+
+  useEffect(() => {
+    setFilteredCustomers(customers.filter(c => 
+      c.name.toLowerCase().includes(customerSearch.toLowerCase())
+    ));
+  }, [customerSearch, customers]);
+
+  useEffect(() => {
+    setFilteredProducts(products.filter(p => 
+      p.name.toLowerCase().includes(productSearch.toLowerCase())
+    ));
+  }, [productSearch, products]);
 
   useEffect(() => {
     loadCustomers();
@@ -69,7 +89,10 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
       .select("*")
       .eq("user_id", user.id);
 
-    if (data) setCustomers(data);
+    if (data) {
+      setCustomers(data);
+      setFilteredCustomers(data);
+    }
   };
 
   const loadProducts = async () => {
@@ -81,7 +104,10 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
       .select("*, product_variants(*)")
       .eq("user_id", user.id);
 
-    if (data) setProducts(data);
+    if (data) {
+      setProducts(data);
+      setFilteredProducts(data);
+    }
   };
 
   const handleProductChange = (productId: string) => {
@@ -149,6 +175,14 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
       return;
     }
 
+    const total = calculateTotal();
+    const paidAmount = values.payment_type === "partial" ? (values.paid_amount || 0) : total;
+    
+    if (values.payment_type === "partial" && paidAmount >= total) {
+      toast.error("Pagamento parcial deve ser menor que o total");
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -159,9 +193,9 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
           user_id: user.id,
           customer_id: values.customer_id,
           sale_number: values.sale_number,
-          total_amount: calculateTotal(),
+          total_amount: total,
           payment_method: values.payment_method,
-          payment_status: values.payment_status,
+          payment_status: paidAmount >= total ? "paid" : "pending",
           notes: values.notes,
         }])
         .select()
@@ -181,6 +215,22 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
 
       const { error: itemsError } = await supabase.from("sale_items").insert(saleItems);
       if (itemsError) throw itemsError;
+
+      // Se pagamento parcial, criar conta a receber
+      if (values.payment_type === "partial" && paidAmount < total) {
+        const remainingAmount = total - paidAmount;
+        const { error: receivableError } = await supabase.from("accounts_receivable").insert([{
+          user_id: user.id,
+          customer_id: values.customer_id,
+          sale_id: sale.id,
+          amount: remainingAmount,
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          status: "pending",
+          notes: `Saldo restante da venda ${values.sale_number}`,
+        }]);
+
+        if (receivableError) throw receivableError;
+      }
 
       toast.success("Venda registrada com sucesso!");
       onSuccess();
@@ -209,7 +259,15 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {customers.map((customer) => (
+                    <div className="p-2">
+                      <Input
+                        placeholder="Buscar cliente..."
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        className="mb-2"
+                      />
+                    </div>
+                    {filteredCustomers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
                       </SelectItem>
@@ -236,7 +294,7 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <FormField
             control={form.control}
             name="payment_method"
@@ -264,10 +322,10 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
 
           <FormField
             control={form.control}
-            name="payment_status"
+            name="payment_type"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Status do Pagamento</FormLabel>
+                <FormLabel>Tipo de Pagamento</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -275,14 +333,36 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="paid">Pago</SelectItem>
+                    <SelectItem value="total">Pagamento Total</SelectItem>
+                    <SelectItem value="partial">Pagamento Parcial</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          {form.watch("payment_type") === "partial" && (
+            <FormField
+              control={form.control}
+              name="paid_amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor Pago</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         <div className="border rounded-lg p-4 space-y-4">
@@ -294,7 +374,15 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
                 <SelectValue placeholder="Produto" />
               </SelectTrigger>
               <SelectContent>
-                {products.map((product) => (
+                <div className="p-2">
+                  <Input
+                    placeholder="Buscar produto..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="mb-2"
+                  />
+                </div>
+                {filteredProducts.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
                     {product.name}
                   </SelectItem>
@@ -303,18 +391,35 @@ export function SaleForm({ onSuccess, onCancel }: SaleFormProps) {
             </Select>
 
             {currentProduct?.product_variants?.length > 0 && (
-              <Select value={selectedVariant} onValueChange={handleVariantChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Variação" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currentProduct.product_variants.map((variant: any) => (
-                    <SelectItem key={variant.id} value={variant.id}>
-                      {variant.name} (+R$ {parseFloat(variant.price_modifier).toFixed(2)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <Select value={selectedVariant} onValueChange={handleVariantChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Variação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currentProduct.product_variants.map((variant: any) => (
+                      <SelectItem key={variant.id} value={variant.id}>
+                        {variant.name} (+R$ {parseFloat(variant.price_modifier).toFixed(2)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedVariant && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => {
+                      setSelectedVariant("");
+                      const product = products.find(p => p.id === selectedProduct);
+                      if (product) setUnitPrice(parseFloat(product.base_price));
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             )}
 
             <Input
