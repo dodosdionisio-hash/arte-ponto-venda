@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Eye } from "lucide-react";
+import { Plus, Trash2, Eye, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +54,36 @@ const Sales = () => {
 
   const handleQuickSale = async () => {
     setDialogOpen(true);
+  };
+
+  const handleCompleteSale = async (saleId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Atualizar status da venda para pago
+    const { error: saleError } = await supabase
+      .from("sales")
+      .update({ payment_status: "paid" })
+      .eq("id", saleId);
+
+    if (saleError) {
+      toast.error("Erro ao concluir pagamento");
+      return;
+    }
+
+    // Remover da conta a receber
+    const { error: receivableError } = await supabase
+      .from("accounts_receivable")
+      .delete()
+      .eq("sale_id", saleId);
+
+    if (receivableError) {
+      toast.error("Erro ao atualizar contas a receber");
+      return;
+    }
+
+    toast.success("Pagamento concluído com sucesso!");
+    loadSales();
   };
 
   const getStatusBadge = (status: string) => {
@@ -146,6 +176,15 @@ const Sales = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      {sale.payment_status === "pending" && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleCompleteSale(sale.id)}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
