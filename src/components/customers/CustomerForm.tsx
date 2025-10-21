@@ -20,20 +20,21 @@ const customerSchema = z.object({
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
 interface CustomerFormProps {
+  customer?: any;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
+export function CustomerForm({ customer, onSuccess, onCancel }: CustomerFormProps) {
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      cpf_cnpj: "",
-      address: "",
-      notes: "",
+      name: customer?.name || "",
+      email: customer?.email || "",
+      phone: customer?.phone || "",
+      cpf_cnpj: customer?.cpf_cnpj || "",
+      address: customer?.address || "",
+      notes: customer?.notes || "",
     },
   });
 
@@ -42,7 +43,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { error } = await supabase.from("customers").insert([{
+      const customerData = {
         name: values.name,
         email: values.email,
         phone: values.phone,
@@ -50,15 +51,25 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
         address: values.address,
         notes: values.notes,
         user_id: user.id,
-      }]);
+      };
 
-      if (error) throw error;
+      if (customer?.id) {
+        const { error } = await supabase
+          .from("customers")
+          .update(customerData)
+          .eq("id", customer.id);
+        if (error) throw error;
+        toast.success("Cliente atualizado com sucesso!");
+      } else {
+        const { error } = await supabase.from("customers").insert([customerData]);
+        if (error) throw error;
+        toast.success("Cliente cadastrado com sucesso!");
+      }
 
-      toast.success("Cliente cadastrado com sucesso!");
       onSuccess();
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao cadastrar cliente");
+      toast.error(customer?.id ? "Erro ao atualizar cliente" : "Erro ao cadastrar cliente");
     }
   };
 
@@ -156,7 +167,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
             Cancelar
           </Button>
           <Button type="submit" className="flex-1">
-            Cadastrar
+            {customer?.id ? "Atualizar" : "Cadastrar"}
           </Button>
         </div>
       </form>

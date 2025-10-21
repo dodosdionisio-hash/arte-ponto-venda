@@ -11,6 +11,7 @@ import { toast } from "sonner";
 const Customers = () => {
   const [customers, setCustomers] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<any>(null);
 
   useEffect(() => {
     loadCustomers();
@@ -32,6 +33,16 @@ const Customers = () => {
     }
 
     setCustomers(data || []);
+  };
+
+  const handleEdit = (customer: any) => {
+    setEditingCustomer(customer);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingCustomer(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -103,7 +114,14 @@ const Customers = () => {
                     <TableCell>{customer.email || "-"}</TableCell>
                     <TableCell>{customer.phone || "-"}</TableCell>
                     <TableCell>{customer.cpf_cnpj || "-"}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(customer)}
+                      >
+                        Editar
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

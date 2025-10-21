@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { QuoteForm } from "@/components/quotes/QuoteForm";
+import { SaleForm } from "@/components/sales/SaleForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -92,8 +92,8 @@ const Sales = () => {
               <DialogHeader>
                 <DialogTitle>Venda Rápida</DialogTitle>
               </DialogHeader>
-              <QuoteForm
-                onSuccess={async () => {
+              <SaleForm
+                onSuccess={() => {
                   setDialogOpen(false);
                   loadSales();
                 }}

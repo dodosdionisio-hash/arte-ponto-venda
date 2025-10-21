@@ -12,6 +12,7 @@ import { toast } from "sonner";
 const Products = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
 
   useEffect(() => {
     loadProducts();
@@ -23,7 +24,7 @@ const Products = () => {
 
     const { data, error } = await supabase
       .from("products")
-      .select("*")
+      .select("*, product_variants(*)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -33,6 +34,16 @@ const Products = () => {
     }
 
     setProducts(data || []);
+  };
+
+  const handleEdit = (product: any) => {
+    setEditingProduct(product);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingProduct(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -57,23 +68,24 @@ const Products = () => {
             <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
             <p className="text-muted-foreground">Gerencie seus produtos e serviços</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => setEditingProduct(null)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Produto
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Cadastrar Produto/Serviço</DialogTitle>
+                <DialogTitle>{editingProduct ? "Editar Produto" : "Cadastrar Produto"}</DialogTitle>
               </DialogHeader>
               <ProductForm
+                product={editingProduct}
                 onSuccess={() => {
-                  setDialogOpen(false);
+                  handleCloseDialog();
                   loadProducts();
                 }}
-                onCancel={() => setDialogOpen(false)}
+                onCancel={handleCloseDialog}
               />
             </DialogContent>
           </Dialog>
@@ -86,6 +98,7 @@ const Products = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Preço Base</TableHead>
+                <TableHead>Variações</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -93,7 +106,7 @@ const Products = () => {
             <TableBody>
               {products.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     Nenhum produto cadastrado
                   </TableCell>
                 </TableRow>
@@ -108,11 +121,27 @@ const Products = () => {
                     </TableCell>
                     <TableCell>R$ {Number(product.base_price).toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant={product.active ? "default" : "secondary"}>
+                      {product.product_variants?.length > 0 ? (
+                        <span className="text-sm text-muted-foreground">
+                          {product.product_variants.length} variações
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.active ? "default" : "destructive"}>
                         {product.active ? "Ativo" : "Inativo"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(product)}
+                      >
+                        Editar
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
