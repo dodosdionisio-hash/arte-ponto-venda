@@ -85,7 +85,7 @@ const Settings = () => {
 
       const { error: uploadError } = await supabase.storage
         .from('store-assets')
-        .upload(filePath, file);
+        .upload(filePath, file, { cacheControl: '3600', contentType: file.type });
 
       if (uploadError) throw uploadError;
 
@@ -119,14 +119,17 @@ const Settings = () => {
       } else {
         const { data, error } = await supabase
           .from("store_settings")
-          .insert([{
-            company_name: values.company_name,
-            cnpj: values.cnpj,
-            address: values.address,
-            phone: values.phone,
-            email: values.email,
-            user_id: user.id,
-          }])
+          .insert([
+            {
+              company_name: values.company_name,
+              cnpj: values.cnpj,
+              address: values.address,
+              phone: values.phone,
+              email: values.email,
+              logo_url: values.logo_url,
+              user_id: user.id,
+            },
+          ])
           .select()
           .single();
 

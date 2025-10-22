@@ -57,7 +57,7 @@ export function SaleViewer({ saleId }: SaleViewerProps) {
         </Button>
       </div>
 
-      <div className="bg-gradient-to-br from-white to-gray-50 text-black p-10 rounded-xl shadow-xl print:p-0 print:shadow-none print:bg-white">
+      <div className="print-container bg-gradient-to-br from-white to-gray-50 text-black p-10 rounded-xl shadow-xl print:p-0 print:shadow-none print:bg-white">
         {settings?.logo_url && (
           <div className="flex justify-center mb-8">
             <img src={settings.logo_url} alt="Logo" className="h-24 object-contain" />
@@ -138,21 +138,10 @@ export function SaleViewer({ saleId }: SaleViewerProps) {
 
       <style>{`
         @media print {
-          .no-print {
-            display: none !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          .bg-white, .bg-white * {
-            visibility: visible;
-          }
-          .bg-white {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
+          .no-print { display: none !important; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          html, body { background: white !important; }
+          .print-container { break-inside: avoid; }
         }
       `}</style>
     </div>

@@ -26,23 +26,23 @@ const Dashboard = () => {
       supabase.from("customers").select("id", { count: "exact" }).eq("user_id", user.id),
       supabase.from("products").select("id", { count: "exact" }).eq("user_id", user.id),
       supabase.from("quotes").select("id", { count: "exact" }).eq("user_id", user.id).eq("status", "pending"),
-      supabase.from("sales").select("total_amount").eq("user_id", user.id),
+      supabase.from("sales").select("total_amount, payment_status").eq("user_id", user.id),
       supabase.from("accounts_payable").select("amount, status").eq("user_id", user.id),
       supabase.from("accounts_receivable").select("amount, status").eq("user_id", user.id),
     ]);
 
-    const totalSales = sales.data?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0;
-    
-    // Receitas: contas recebidas (pagas) + vendas pagas
+    // Receitas: vendas pagas no ato + contas a receber quitadas
     const receivedAmount = accountsReceivable.data
-      ?.filter(r => r.status === "paid")
+      ?.filter((r) => r.status === "paid")
       .reduce((sum, r) => sum + Number(r.amount), 0) || 0;
-    const paidSales = sales.data?.reduce((sum, sale) => sum + Number(sale.total_amount), 0) || 0;
-    const revenue = receivedAmount + paidSales;
+    const paidSalesAmount = sales.data
+      ?.filter((s: any) => s.payment_status === "paid")
+      .reduce((sum: number, s: any) => sum + Number(s.total_amount), 0) || 0;
+    const revenue = receivedAmount + paidSalesAmount;
 
     // Despesas: contas pagas
     const expenses = accountsPayable.data
-      ?.filter(p => p.status === "paid")
+      ?.filter((p) => p.status === "paid")
       .reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
     setStats({

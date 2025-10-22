@@ -68,7 +68,7 @@ const Products = () => {
             <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
             <p className="text-muted-foreground">Gerencie seus produtos e serviços</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => setEditingProduct(null)}>
                 <Plus className="mr-2 h-4 w-4" />
