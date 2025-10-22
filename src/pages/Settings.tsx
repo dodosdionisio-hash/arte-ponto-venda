@@ -85,7 +85,7 @@ const Settings = () => {
 
       const { error: uploadError } = await supabase.storage
         .from('store-assets')
-        .upload(filePath, file, { cacheControl: '3600', contentType: file.type });
+        .upload(filePath, file, { cacheControl: '3600', contentType: file.type, upsert: true });
 
       if (uploadError) throw uploadError;
 
