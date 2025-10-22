@@ -98,7 +98,7 @@ export function SaleViewer({ saleId }: SaleViewerProps) {
           </div>
         </div>
 
-        <div className="mb-6 overflow-hidden print:overflow-visible fix-overflow rounded-lg border-2 border-gray-200">
+        <div className="mb-6 overflow-hidden print:overflow-visible rounded-lg border-2 border-gray-200">
           <table className="w-full">
             <thead className="bg-primary text-primary-foreground">
               <tr>
@@ -138,23 +138,39 @@ export function SaleViewer({ saleId }: SaleViewerProps) {
 
       <style>{`
         @media print {
-          .no-print { display: none !important; }
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
-
-          /* Print only the receipt container */
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
-          .print-container { position: absolute; left: 0; top: 0; width: 100%; }
-
-          /* Avoid cuts and preserve layout */
-          .print-container .avoid-break { break-inside: avoid; page-break-inside: avoid; }
-          table { width: 100% !important; border-collapse: collapse !important; }
+          .print-container { 
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white !important;
+            padding: 20mm !important;
+            page-break-inside: avoid;
+          }
+          .no-print { display: none !important; }
+          * { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body { 
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          table { 
+            width: 100% !important;
+            border-collapse: collapse !important;
+            page-break-inside: auto;
+          }
+          tr { 
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
           thead { display: table-header-group; }
           tfoot { display: table-footer-group; }
-          tr, td, th { break-inside: avoid !important; page-break-inside: avoid !important; }
-          .print-container .fix-overflow { overflow: visible !important; }
-          img { max-height: 120px; object-fit: contain; }
         }
       `}</style>
     </div>

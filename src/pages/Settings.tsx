@@ -85,7 +85,10 @@ const Settings = () => {
 
       const { error: uploadError } = await supabase.storage
         .from('store-assets')
-        .upload(filePath, file, { cacheControl: '3600', contentType: file.type, upsert: true });
+        .upload(filePath, file, { 
+          cacheControl: '3600',
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
@@ -95,9 +98,9 @@ const Settings = () => {
 
       form.setValue('logo_url', publicUrl);
       toast.success("Logo enviada com sucesso!");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast.error("Erro ao enviar logo");
+      toast.error(error.message || "Erro ao enviar logo");
     } finally {
       setUploading(false);
     }
